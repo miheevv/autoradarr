@@ -4,7 +4,7 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/autoradarr.svg)](https://pypi.org/project/autoradarr/)
 [![wemake-python-styleguide](https://img.shields.io/badge/style-wemake-000000.svg)](https://github.com/wemake-services/wemake-python-styleguide)
 
-Auto download from cinemate
+Auto scan for new films in imbd, kinopoisk, etc and add into radarr db
 
 
 ## Features
@@ -16,7 +16,7 @@ Auto download from cinemate
 ## Installation
 
 ```bash
-pip install autocinemator
+pip install autoradarr
 ```
 
 
@@ -25,7 +25,7 @@ pip install autocinemator
 Showcase how your project can be used:
 
 ```python
-from autocinemator.example import some_function
+from autoradarr.example import some_function
 
 print(some_function(3, 4))
 # => 7
