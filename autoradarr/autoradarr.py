@@ -5,7 +5,7 @@ Regulary insert into radarr new films links from IMDB, Kinopoisk, etc.
 
 Films DB structure:
 films: title, originalTitle, imdbId, categories, date, countries, overview
-       IMDB_rate, IMDB_count, 
+       IMDB_rate, IMDB_count,
        added_datetime, torrent_url?, bad_torrent?, new (resently added)
        filmfolder (by default - 'films'), to_download, downloaded,
        to_delete (to delete on server),
@@ -56,6 +56,7 @@ def get_db(host, dbname, user, passw):
         return None
     return client[dbname]
 
+
 def filter_imdb_by_rating_year(newfilms, current_year=0):
     ''' Filter new films and return list to add (with autoset filmfolders, etc. params) '''
     if not current_year:
@@ -76,21 +77,26 @@ def filter_imdb_by_rating_year(newfilms, current_year=0):
 
     return notfiltred_films
 
+
 def filter_imdb(client, newfilms):
     '''Filter: by rating & year, if marked_filtred, by category'''
     filtred = filter_imdb_by_rating_year(newfilms)
     return filtred
+
 
 def get_new_from_imdb(client):
     ''' Get new films from imdb-api.com:
         1. Convert fields in radarr format
         2. NOT ADD film if old, allready persist in DB or marked_filtred.
         '''
-    
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    # TODO get from env
+
     imdb_apikey = os.environ.get('IMDB_APIKEY')
-    r = client.get('https://imdb-api.com/en/API/MostPopularMovies/' + imdb_apikey, headers=headers)
+    if not imdb_apikey:
+        print('Could not get env IMDB_APIKEY', file=sys.stderr)
+        return
+
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    r = client.get('https://imdb-api.com/ru/API/MostPopularMovies/' + imdb_apikey, headers=headers)
     newfilms = filter_imdb(client, r.json()['items'])
     return newfilms
 
@@ -104,7 +110,7 @@ def get_new_films(client):
     #if not current_year:
     #    current_year = datetime.datetime.utcnow().year
     return get_new_from_imdb(client)
-    
+
 
 #TODO get_film_info
 
@@ -113,9 +119,9 @@ def get_new_films(client):
 
 
 #TODO
-''' Add torrent url and mark it for download if right catagory 
+''' Add torrent url and mark it for download if right catagory
 def add_torrurl_and_mark(client, films, usr, pwd):
-    
+
     ret_films = []
     for i in range(len(films)):
         film_to_add = films[i]
@@ -151,7 +157,6 @@ def main():
     # Get new films (if not persist in db) from cinemate.cc
     client = requests.session()
     newfilms = get_new_films(client)
-    newfilms = filter_by_rating_or_year(newfilms)
     pprint(newfilms)
     # Get film's info for every film
     #for item in newfilms:
