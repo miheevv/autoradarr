@@ -57,7 +57,7 @@ def get_db(host, dbname, user, passw):
     return client[dbname]
 
 
-def filter_imdb_by_rating_year(newfilms, current_year=0):
+def filter_by_rating_year(newfilms, rating_field, rcount_field, year_field, current_year=0):
     ''' Filter new films and return list to add (with autoset filmfolders, etc. params) '''
     if not current_year:
         current_year = datetime.datetime.utcnow().year
@@ -65,11 +65,11 @@ def filter_imdb_by_rating_year(newfilms, current_year=0):
     notfiltred_films = []
     for item in newfilms:
         removeflag = None
-        if ('imDbRating' not in item) or (not item['imDbRating']) or (float(item['imDbRating']) < 6.0):
+        if (rating_field not in item) or (not item[rating_field]) or (float(item[rating_field]) < 6.0):
             removeflag = 1
-        if ('imDbRatingCount' not in item) or (not item['imDbRatingCount']) or (int(item['imDbRatingCount']) < 5000):
+        if (rcount_field not in item) or (not item[rcount_field]) or (int(item[rcount_field]) < 5000):
             removeflag = 1
-        if ('year' not in item) or (not item['year']) or (int(item['year']) < current_year-1):
+        if (year_field not in item) or (not item[year_field]) or (int(item[year_field]) < current_year-1):
             removeflag = 1
 
         if removeflag is None:
@@ -78,13 +78,30 @@ def filter_imdb_by_rating_year(newfilms, current_year=0):
     return notfiltred_films
 
 
-def filter_imdb(client, newfilms):
-    '''Filter: by rating & year, if marked_filtred, by category'''
-    filtred = filter_imdb_by_rating_year(newfilms)
+def filter_in_db(db, newfilms, title_field_name):
+    '''Remove if film is persist in DB'''
+    films = db.get_collection('films')
+
+    notfiltred_films = []
+    for item in newfilms:
+        removeflag = None
+        if films.find_one({title_field_name: item['title']}):
+            removeflag = 1
+        if removeflag is None:
+            notfiltred_films.append(item)
+
+    return notfiltred_films
+
+
+def filter_imdb(client, db, newfilms):
+    '''Filter: by rating & year, if not persist in DB, by genres'''
+    filtred = filter_by_rating_year(newfilms, 'imDbRating', 'imDbRatingCount', 'year')
+    filtred = filter_in_db(db, filtred, 'originalTitle')
+
     return filtred
 
 
-def get_new_from_imdb(client):
+def get_new_from_imdb(client, db):
     ''' Get new films from imdb-api.com:
         1. Convert fields in radarr format
         2. NOT ADD film if old, allready persist in DB or marked_filtred.
@@ -97,11 +114,11 @@ def get_new_from_imdb(client):
 
     headers = {'User-Agent': 'Mozilla/5.0'}
     r = client.get('https://imdb-api.com/ru/API/MostPopularMovies/' + imdb_apikey, headers=headers)
-    newfilms = filter_imdb(client, r.json()['items'])
+    newfilms = filter_imdb(client, db, r.json()['items'])
     return newfilms
 
 
-def get_new_films(client):
+def get_new_films(client, db):
     ''' Get new films from some kind of rating providers - get_new_from_imdb, get_new_from_kinopoisk (TODO) if enabled (TODO).
         Getters must return fields in raddarr format.
         schema: get_new_films - get_new_from_imdb - filter_imdb - imdb_film_info, mark_filtred and filter_categories'''
@@ -109,7 +126,7 @@ def get_new_films(client):
     #films_in_db = db.films
     #if not current_year:
     #    current_year = datetime.datetime.utcnow().year
-    return get_new_from_imdb(client)
+    return get_new_from_imdb(client, db)
 
 
 #TODO get_film_info
@@ -150,13 +167,13 @@ def main():
     db_password = os.environ.get('AUTORADARR_DB_PASSWORD')
 
     # Prelogin into DB
-    #db = get_db(db_host, DB_NAME, db_user, db_password)
-    #if not db:
-    #    return
+    db = get_db(db_host, DB_NAME, db_user, db_password)
+    if not db:
+        return
 
     # Get new films (if not persist in db) from cinemate.cc
     client = requests.session()
-    newfilms = get_new_films(client)
+    newfilms = get_new_films(client, db)
     pprint(newfilms)
     # Get film's info for every film
     #for item in newfilms:
