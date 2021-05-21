@@ -11,9 +11,8 @@ films: title, originalTitle, imdbId, categories, date, countries, overview
        to_delete (to delete on server),
        deleted (don't download in future again)
 TODO
-myimdblist.py - list for radarr
-imdbworker.py - (on server to add torrent url for download)??? radarr???, and delete old films
-imdbalice.py
+autoradarrlist.py ? - list for radarr if not using radarr api.
+radarralice.py
 
 '''
 
@@ -26,19 +25,24 @@ import re
 import sys
 
 import pymongo
+from pymongo.mongo_client import MongoClient
 import requests
-import json
+from typing import Any, Union
+from requests.models import Response
+
+from requests.sessions import Session
+# import json
 # from bs4 import BeautifulSoup
 
 
-def get_db(host, dbname, user, passw):
-    ''' Connect to mongo and return db object '''
+def get_db(host: str, dbname: str, user: str, passw: str) -> Union[MongoClient, None]:
+    ''' Connect to mongo and return client db object '''
 
     try:
-        client = pymongo.MongoClient(host,
-                                     username=user,
-                                     password=passw,
-                                     authSource=dbname)
+        client: Union[MongoClient, None] = pymongo.MongoClient(host,
+                                                               username=user,
+                                                               password=passw,
+                                                               authSource=dbname)
     # Force connection on a request as the connect=True parameter of MongoClient
     # seems to be useless here
         client.server_info()
@@ -57,76 +61,114 @@ def get_db(host, dbname, user, passw):
     return client[dbname]
 
 
-def filter_by_rating_year(newfilms, rating_field, rcount_field, year_field, current_year=0):
-    ''' Filter new films and return list to add (with autoset filmfolders, etc. params) '''
-    if not current_year:
-        current_year = datetime.datetime.utcnow().year
+def filter_regular_result(newfilms: Any, rating_field: str, rating_count_field: str, year_field: str, current_year: int = 0) -> Any:
+    ''' Filter regular list (MostPopularMovies, new, daily or other) of new films and return json to add'''
+    year: int = current_year
+    if not year:
+        year = datetime.datetime.utcnow().year
 
-    notfiltred_films = []
+    notfiltred_films: Any = []
     for item in newfilms:
-        removeflag = None
-        if (rating_field not in item) or (not item[rating_field]) or (float(item[rating_field]) < 6.0):
-            removeflag = 1
-        if (rcount_field not in item) or (not item[rcount_field]) or (int(item[rcount_field]) < 5000):
-            removeflag = 1
-        if (year_field not in item) or (not item[year_field]) or (int(item[year_field]) < current_year-1):
-            removeflag = 1
+        removeflag: bool = False
+        if (rating_field not in item) or (not item[rating_field]) or (float(item[rating_field]) < 6.5):
+            removeflag = True
+        if (rating_count_field not in item) or (not item[rating_count_field]) or (int(item[rating_count_field]) < 5000):
+            removeflag = True
+        if (year_field not in item) or (not item[year_field]) or (int(item[year_field]) < year-1):
+            removeflag = True
 
-        if removeflag is None:
+        if not removeflag:
             notfiltred_films.append(item)
 
     return notfiltred_films
 
 
-def filter_in_db(db, newfilms, title_field_name):
-    '''Remove if film is persist in DB'''
-    films = db.get_collection('films')
+def filter_in_db(db: MongoClient, newfilms: Any, title_field_name: str) -> Any:
+    ''' Remove if film is persist in DB '''
 
-    notfiltred_films = []
+    films: Any = db.get_collection('films')
+
+    notfiltred_films: Any = []
     for item in newfilms:
-        removeflag = None
+        removeflag: bool = False
         if films.find_one({title_field_name: item['title']}):
-            removeflag = 1
-        if removeflag is None:
+            removeflag = True
+        if not removeflag:
             notfiltred_films.append(item)
 
     return notfiltred_films
 
 
-def filter_imdb(client, db, newfilms):
-    '''Filter: by rating & year, if not persist in DB, by genres'''
-    filtred = filter_by_rating_year(newfilms, 'imDbRating', 'imDbRatingCount', 'year')
-    filtred = filter_in_db(db, filtred, 'originalTitle')
-
-    return filtred
-
-
-def get_new_from_imdb(client, db):
-    ''' Get new films from imdb-api.com:
-        1. Convert fields in radarr format
-        2. NOT ADD film if old, allready persist in DB or marked_filtred.
-        '''
-
-    imdb_apikey = os.environ.get('IMDB_APIKEY')
+def get_imdb_data(client: Session, data_type: str, param: str = '') -> Response:
+    ''' Get imdb api data, data_type - 'popular', 'details'. param - imdb id, etc. '''
+    imdb_apikey: str = os.environ.get('IMDB_APIKEY')
     if not imdb_apikey:
         print('Could not get env IMDB_APIKEY', file=sys.stderr)
         return
 
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    r = client.get('https://imdb-api.com/ru/API/MostPopularMovies/' + imdb_apikey, headers=headers)
-    newfilms = filter_imdb(client, db, r.json()['items'])
+    headers: dict[str,str] = {'User-Agent': 'Mozilla/5.0'}
+    if data_type == 'popular':
+        return client.get('https://imdb-api.com/ru/API/MostPopularMovies/' + imdb_apikey, headers=headers)
+    if data_type == 'details':
+        return client.get('https://imdb-api.com/ru/API/Title/' + imdb_apikey + '/' + param, headers=headers)
+
+
+def filter_by_detail(client: Session, newfilms: Any, rating_type:str = 'imdb-api.com') -> Any:
+    ''' Filter by film's genres, etc. '''
+
+    accepted_genres: set[str] = {'Action', 'Adventure', 'Sci-Fi', 'Animation', 'Comedy'}
+    bad_genres: set[str] = {'Drama'}
+    notfiltred_films: Any = []
+    
+    for item in newfilms:
+        removeflag: bool = True
+        genres: list[str] = []
+        rating: float = 0
+        if rating_type == 'imdb-api.com':
+            r: Response = get_imdb_data(client, 'details', item['id'])
+            genres = r.json()['genres'].split(', ')
+            rating = float(item['imDbRating'])
+
+        if set.intersection(accepted_genres, genres):    
+            removeflag = False  # if accepted_genres persist
+        if set.intersection(bad_genres, genres) and (rating < 7):
+            removeflag = True  # if bad_genres persist and low rating
+
+        if not removeflag:
+            notfiltred_films.append(item)
+        else:
+            pass #TODO mark film filtred in db
+
+    return notfiltred_films
+
+
+def filter_imdb_films(client: Session, db: MongoClient, newfilms: Any) -> Any:
+    ''' Filter: first (new or popular films list) result (by rating & year, etc), if not persist in DB, film's detail (by genres or other) '''
+
+    filtred: Any = filter_regular_result(newfilms, 'imDbRating', 'imDbRatingCount', 'year')
+    filtred = filter_in_db(db, filtred, 'originalTitle')
+    filtred = filter_by_detail(client, filtred)
+    return filtred
+
+
+def get_new_from_imdb(client: Session, db: MongoClient) -> Any:
+    ''' Get new films from imdb-api.com:
+        1. Convert fields in radarr format
+        2. NOT ADD film if old, allready persist in DB or marked_filtred. '''
+
+    r: Response = get_imdb_data(client, 'popular')
+    newfilms: Any = filter_imdb_films(client, db, r.json()['items'])
     return newfilms
 
 
-def get_new_films(client, db):
+def get_new_films(client: Session, db: MongoClient) -> Any:
     ''' Get new films from some kind of rating providers - get_new_from_imdb, get_new_from_kinopoisk (TODO) if enabled (TODO).
-        Getters must return fields in raddarr format.
-        schema: get_new_films - get_new_from_imdb - filter_imdb - imdb_film_info, mark_filtred and filter_categories'''
+        Geters must return fields in raddarr format.
+        schema: get_new_films - get_new_from_imdb|kinopoisk|etc - filter_imdb|kinopoisk|etc - filter_*. '''
 
-    #films_in_db = db.films
-    #if not current_year:
-    #    current_year = datetime.datetime.utcnow().year
-    return get_new_from_imdb(client, db)
+    newfilms: Any = get_new_from_imdb(client, db)
+    #TODO convert return in radarr api format list[dict]
+    return newfilms
 
 
 #TODO get_film_info
@@ -159,21 +201,22 @@ def add_torrurl_and_mark(client, films, usr, pwd):
 
 def main():
     ''' Return number of added films of None if error '''
+
     locale.setlocale(locale.LC_ALL, '')
     # DB
-    db_host = os.environ.get('AUTORADARR_DB_HOST')
-    DB_NAME = 'autoradarr'
-    db_user = os.environ.get('AUTORADARR_DB_USERNAME')
-    db_password = os.environ.get('AUTORADARR_DB_PASSWORD')
+    db_host: str = os.environ.get('AUTORADARR_DB_HOST')
+    DB_NAME: str = 'autoradarr'
+    db_user: str = os.environ.get('AUTORADARR_DB_USERNAME')
+    db_password: str = os.environ.get('AUTORADARR_DB_PASSWORD')
 
     # Prelogin into DB
-    db = get_db(db_host, DB_NAME, db_user, db_password)
+    db: MongoClient = get_db(db_host, DB_NAME, db_user, db_password)
     if not db:
         return
 
     # Get new films (if not persist in db) from cinemate.cc
-    client = requests.session()
-    newfilms = get_new_films(client, db)
+    client: Session = requests.session()
+    newfilms: list[str] = get_new_films(client, db)
     pprint(newfilms)
     # Get film's info for every film
     #for item in newfilms:
