@@ -112,14 +112,17 @@ def get_imdb_data(client: Session, data_type: str, param: str = '') -> Response:
     if data_type == 'details':
         return client.get('https://imdb-api.com/ru/API/Title/' + imdb_apikey + '/' + param, headers=headers)
 
+def mark_filtred_in_db(db:MongoClient, id: str, title: str) -> None:
+    films: Any = db.get_collection('films')
+    films.insert_one({'id': id, 'title': title})
 
-def filter_by_detail(client: Session, newfilms: Any, rating_type:str = 'imdb-api.com') -> Any:
+def filter_by_detail(client: Session, db: MongoClient, newfilms: Any, rating_type:str = 'imdb-api.com') -> Any:
     ''' Filter by film's genres, etc. '''
 
     accepted_genres: set[str] = {'Action', 'Adventure', 'Sci-Fi', 'Animation', 'Comedy'}
     bad_genres: set[str] = {'Drama'}
     notfiltred_films: Any = []
-    
+
     for item in newfilms:
         removeflag: bool = True
         genres: list[str] = []
@@ -129,7 +132,7 @@ def filter_by_detail(client: Session, newfilms: Any, rating_type:str = 'imdb-api
             genres = r.json()['genres'].split(', ')
             rating = float(item['imDbRating'])
 
-        if set.intersection(accepted_genres, genres):    
+        if set.intersection(accepted_genres, genres):
             removeflag = False  # if accepted_genres persist
         if set.intersection(bad_genres, genres) and (rating < 7):
             removeflag = True  # if bad_genres persist and low rating
@@ -137,7 +140,7 @@ def filter_by_detail(client: Session, newfilms: Any, rating_type:str = 'imdb-api
         if not removeflag:
             notfiltred_films.append(item)
         else:
-            pass #TODO mark film filtred in db
+            mark_filtred_in_db(item['id'], item['title']) # next scan will ignore this film
 
     return notfiltred_films
 
@@ -147,7 +150,7 @@ def filter_imdb_films(client: Session, db: MongoClient, newfilms: Any) -> Any:
 
     filtred: Any = filter_regular_result(newfilms, 'imDbRating', 'imDbRatingCount', 'year')
     filtred = filter_in_db(db, filtred, 'originalTitle')
-    filtred = filter_by_detail(client, filtred)
+    filtred = filter_by_detail(client, db, filtred)
     return filtred
 
 
