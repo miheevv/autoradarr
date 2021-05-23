@@ -112,9 +112,11 @@ def get_imdb_data(client: Session, data_type: str, param: str = '') -> Response:
     if data_type == 'details':
         return client.get('https://imdb-api.com/ru/API/Title/' + imdb_apikey + '/' + param, headers=headers)
 
+
 def mark_filtred_in_db(db:MongoClient, id: str, title: str) -> None:
     films: Any = db.get_collection('films')
-    films.insert_one({'id': id, 'title': title})
+    films.insert_one({'id': id, 'title': title, 'filtred': 1, 'added': datetime.datetime.utcnow()})
+
 
 def filter_by_detail(client: Session, db: MongoClient, newfilms: Any, rating_type:str = 'imdb-api.com') -> Any:
     ''' Filter by film's genres, etc. '''
@@ -140,7 +142,7 @@ def filter_by_detail(client: Session, db: MongoClient, newfilms: Any, rating_typ
         if not removeflag:
             notfiltred_films.append(item)
         else:
-            mark_filtred_in_db(item['id'], item['title']) # next scan will ignore this film
+            mark_filtred_in_db(db, item['id'], item['title']) # next scan will ignore this film
 
     return notfiltred_films
 
@@ -154,15 +156,21 @@ def filter_imdb_films(client: Session, db: MongoClient, newfilms: Any) -> Any:
     return filtred
 
 
-def get_new_from_imdb(client: Session, db: MongoClient) -> Any:
+def convert_imdb_in_radarr(newfilms: Any) -> list:
+    #TODO convert return in radarr api format list[dict]
+    radarr_films: list[dict[Union[str, int]]] = []
+    replace_map: dict[str] = {'originalTitle': 'title', 'imdbId':'id', 'year': 'year'}
+    return replace_map
+
+def get_new_from_imdb(client: Session, db: MongoClient) -> list:
     ''' Get new films from imdb-api.com:
         1. Convert fields in radarr format
         2. NOT ADD film if old, allready persist in DB or marked_filtred. '''
 
     r: Response = get_imdb_data(client, 'popular')
     newfilms: Any = filter_imdb_films(client, db, r.json()['items'])
-    return newfilms
-
+    radarr_newfilms = convert_imdb_in_radarr(newfilms)
+    return radarr_newfilms
 
 def get_new_films(client: Session, db: MongoClient) -> Any:
     ''' Get new films from some kind of rating providers - get_new_from_imdb, get_new_from_kinopoisk (TODO) if enabled (TODO).
@@ -170,7 +178,6 @@ def get_new_films(client: Session, db: MongoClient) -> Any:
         schema: get_new_films - get_new_from_imdb|kinopoisk|etc - filter_imdb|kinopoisk|etc - filter_*. '''
 
     newfilms: Any = get_new_from_imdb(client, db)
-    #TODO convert return in radarr api format list[dict]
     return newfilms
 
 
