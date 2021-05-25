@@ -200,7 +200,7 @@ def normalize_filepath(filepath: str ) -> str:
     #TODO get replace format from env
     value = value.replace(':', ' - ')   # Radarr format
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = re.sub(r'[^-()/\w\s]', '', value)
+    value = re.sub(r'[^-()\w\s]', '', value)
     return re.sub(r'[-\t\n\r\f\v]+', '-', value).strip('-_').replace('  ', ' ')
 
 
@@ -213,11 +213,11 @@ def set_root_folders_by_genres(film: Any, genres:  Any) -> Any:
     # TODO getformat from radarr template (from env?) - 
     # '{Movie Title} ({Release Year})'
 
-    film['rootFolderPath'] = normalize_filepath(radarr_root_other)
-    film['folderName'] = normalize_filepath(radarr_root_other + '/' + film['fullTitle'])
+    film['rootFolderPath'] = radarr_root_other
+    film['folderName'] = radarr_root_other + '/' + normalize_filepath(film['fullTitle'])
     if 'Animation' in genres:
-        film['rootFolderPath'] = normalize_filepath(radarr_root_animations)
-        film['folderName'] = normalize_filepath(radarr_root_animations + '/' + film['fullTitle'])
+        film['rootFolderPath'] = radarr_root_animations
+        film['folderName'] = radarr_root_animations + '/' + normalize_filepath(film['fullTitle'])
     return film
 
 
