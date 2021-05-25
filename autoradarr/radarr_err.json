@@ -1,0 +1,137 @@
+[
+    {
+        "propertyName": "QualityProfileId",
+        "errorMessage": "\\u0027Quality Profile Id\\u0027 must be greater than \\u00270\\u0027.",
+        "attemptedValue": 0,
+        "severity": "error",
+        "errorCode": "GreaterThanValidator",
+        "formattedMessageArguments": [],
+        "formattedMessagePlaceholderValues": {
+            "comparisonValue": 0,
+            "comparisonProperty": "",
+            "propertyName": "Quality Profile Id",
+            "propertyValue": 0
+        },
+        "resourceName": "GreaterThanValidator"
+    },
+    {
+        "propertyName": "QualityProfileId",
+        "errorMessage": "QualityProfile does not exist",
+        "attemptedValue": 0,
+        "severity": "error",
+        "errorCode": "ProfileExistsValidator",
+        "formattedMessageArguments": [],
+        "formattedMessagePlaceholderValues": {
+            "propertyName": "Quality Profile Id",
+            "propertyValue": 0
+        }
+    },
+    {
+        "propertyName": "Path",
+        "errorMessage": "Invalid Path",
+        "severity": "error",
+        "errorCode": "PathValidator",
+        "formattedMessageArguments": [],
+        "formattedMessagePlaceholderValues": {
+            "propertyName": "Path",
+            "propertyValue": null
+        }
+    },
+    {
+        "propertyName": "RootFolderPath",
+        "errorMessage": "Invalid Path",
+        "severity": "error",
+        "errorCode": "PathValidator",
+        "formattedMessageArguments": [],
+        "formattedMessagePlaceholderValues": {
+            "propertyName": "Root Folder Path",
+            "propertyValue": null
+        }
+    },
+    {
+        "propertyName": "Title",
+        "errorMessage": "\\u0027Title\\u0027 must not be empty.",
+        "severity": "error",
+        "errorCode": "NotEmptyValidator",
+        "formattedMessageArguments": [],
+        "formattedMessagePlaceholderValues": {
+            "propertyName": "Title",
+            "propertyValue": null
+        },
+        "resourceName": "NotEmptyValidator"
+    },
+    {
+        "propertyName": "TmdbId",
+        "errorMessage": "\\u0027Tmdb Id\\u0027 must not be empty.",
+        "attemptedValue": 0,
+        "severity": "error",
+        "errorCode": "NotEmptyValidator",
+        "formattedMessageArguments": [],
+        "formattedMessagePlaceholderValues": {
+            "propertyName": "Tmdb Id",
+            "propertyValue": 0
+        },
+        "resourceName": "NotEmptyValidator"
+    }
+]
+
+{
+      "title": "Tenet",
+      "originalTitle": "Tenet",
+      "alternateTitles": [],
+      "secondaryYearSourceId": 0,
+      "sortTitle": "tenet",
+      "sizeOnDisk": 0,
+      "status": "released",
+      "overview": "Armed with only one word - Tenet - and fighting for the survival of the entire world, the Protagonist journeys through a twilight world of international espionage on a mission that will unfold in something beyond real time.",
+      "inCinemas": "2020-08-26T00:00:00Z",
+      "physicalRelease": "2020-12-14T00:00:00Z",
+      "digitalRelease": "2020-12-08T00:00:00Z",
+      "images": [
+        {
+          "coverType": "poster",
+          "url": "/MediaCover/46/poster.jpg",
+          "remoteUrl": "https://image.tmdb.org/t/p/original/k68nPLbIST6NP96JmTxmZijEvCA.jpg"
+
+        },
+            {
+                  "coverType": "fanart",
+                  "url": "/MediaCover/46/fanart.jpg",
+                  "remoteUrl": "https://image.tmdb.org/t/p/original/wzJRB4MKi3yK138bJyuL9nx47y6.jpg"
+
+        }
+
+    ],
+      "website": "https://www.tenetfilm.com/",
+      "year": 2020,
+      "hasFile": false,
+      "youTubeTrailerId": "LdOM0x0XDMo",
+      "studio": "Syncopy",
+      "path": "/media/films/Tenet (2020)",
+      "qualityProfileId": 6,
+      "monitored": true,
+      "minimumAvailability": "tba",
+      "isAvailable": true,
+      "folderName": "/media/films/Tenet (2020)",
+      "runtime": 150,
+      "cleanTitle": "tenet",
+      "imdbId": "tt6723592",
+      "tmdbId": 577922,
+      "titleSlug": "577922",
+      "certification": "PG-13",
+      "genres": [
+            "Action",
+            "Thriller",
+            "Science Fiction"
+
+    ],
+      "tags": [],
+      "added": "2021-05-25T17:09:01Z",
+          "ratings": {
+            "votes": 5276,
+            "value": 7.3
+
+    },
+      "id": 46
+
+}
