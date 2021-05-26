@@ -312,6 +312,11 @@ def get_new_films(client: Session, db: MongoClient) -> list[dict[Union[str, int]
 
 
 def get_tmdbid_by_imdbid(client: Session, imdbId: str) -> int:
+    ''' Get tmdbId by imdbId useing TMDB API. 
+    
+        https://developers.themoviedb.org/3/find/find-by-id
+    '''
+    
     tmdb_apikey: str = os.environ.get('TMDB_APIKEY')
     if not tmdb_apikey:
         print('Could not get env TMDB_APIKEY', file=sys.stderr)
