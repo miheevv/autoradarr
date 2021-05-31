@@ -5,7 +5,7 @@ Regulary insert into radarr new films links from IMDB, Kinopoisk, etc.
 
 Films DB structure:
 films: originalTitle, imdbId, folderName, year, filtred, persistInRadarr, added
-       
+
        IMDB_rate, IMDB_count,
        added_datetime, torrent_url?, bad_torrent?, new (resently added)
        downloaded, to_delete (to delete on server),
@@ -63,7 +63,7 @@ def get_db(host: str, dbname: str, user: str, passw: str) -> Union[MongoClient, 
 
 
 def filter_regular_result(newfilms: Any, rating_field: str, rating_count_field: str, year_field: str, current_year: int = 0) -> Any:
-    ''' Filter regular list (MostPopularMovies, news, daily or other) of new films and return json to add'''
+    ''' Filter regular list (MostPopularMovies, news, daily or other) of new films and return json to add '''
 
     year: int = current_year
     if not year:
@@ -116,7 +116,7 @@ def get_imdb_data(client: Session, data_type: str, param: str = '') -> Union[Res
         r: Response = client.get('https://imdb-api.com/ru/API/MostPopularMovies/' + imdb_apikey, headers=headers)
     if data_type == 'details':
         r: Response = client.get('https://imdb-api.com/ru/API/Title/' + imdb_apikey + '/' + param, headers=headers)
-    
+
     if r.status_code == 200:
         return r
 
@@ -127,7 +127,7 @@ def get_radarr_data(client: Session, data_type: str, api_json: Any = '') -> Unio
     radarr_apikey: str = os.environ.get('RADARR_APIKEY')
     if not radarr_apikey:
         print('Could not get env RADARR_APIKEY', file=sys.stderr)
-        raise Exception('Could not get env RADARR_APIKEY') 
+        raise Exception('Could not get env RADARR_APIKEY')
     radarr_url: str = os.environ.get('RADARR_URL')
     if not radarr_url:
         print('Could not get env RADARR_URL', file=sys.stderr)
@@ -144,7 +144,7 @@ def get_radarr_data(client: Session, data_type: str, api_json: Any = '') -> Unio
             return r
 
 
-def get_radarr_imdbid_list(r: Response) -> list[str]:
+def get_radarr_imdbid_list(r: Response) -> 'list[str]':
     imdb_list: list[str] = []
     for item in r.json():
         if item['imdbId']:
@@ -153,25 +153,25 @@ def get_radarr_imdbid_list(r: Response) -> list[str]:
 
 
 def mark_filtred_in_db(db:MongoClient, imdbid: str, title: str, persist_in_radarr: int = 0) -> bool:
-    ''' Mark film 'filtred' in DB and return True. 
-    
-        If already founded in DB - return False 
-        
+    ''' Mark film 'filtred' in DB and return True.
+
+        If already founded in DB - return False
+
     '''
-    
+
     films: Any = db.get_collection('films')
 
     if films.find_one({'imdbId': imdbid}):
         return False
-    
+
     if persist_in_radarr == 1:
-        films.insert_one({'imdbId': imdbid, 'originalTitle': title, 
-                          'persistInRadarr': persist_in_radarr, 
+        films.insert_one({'imdbId': imdbid, 'originalTitle': title,
+                          'persistInRadarr': persist_in_radarr,
                           'added': datetime.datetime.utcnow()})
     else:
         films.insert_one({'imdbId': imdbid, 'originalTitle': title, 'filtred': 1,
                           'added': datetime.datetime.utcnow()})
-        
+
     return True
 
 
@@ -210,7 +210,7 @@ def set_root_folders_by_genres(film: Any, genres:  Any) -> Any:
     # TODO parse many types of genres path from env
     radarr_root_other: str = os.environ.get('RADARR_ROOT_OTHER')
     radarr_root_animations: str = os.environ.get('RADARR_ROOT_ANIMATIONS')
-    # TODO getformat from radarr template (from env?) - 
+    # TODO getformat from radarr template (from env?) -
     # '{Movie Title} ({Release Year})'
 
     film['rootFolderPath'] = radarr_root_other
@@ -221,7 +221,7 @@ def set_root_folders_by_genres(film: Any, genres:  Any) -> Any:
     return film
 
 
-def filter_by_detail(client: Session, db: MongoClient, newfilms: Any, rating_type:str = 'imdb-api.com') -> Any:
+def filter_by_detail(client: Session, db: MongoClient, newfilms: Any, rating_type: str = 'imdb-api.com') -> Any:
     ''' Filter by film's genres, etc. '''
 
     accepted_genres: set[str] = {'Action', 'Adventure', 'Sci-Fi', 'Animation', 'Comedy'}
@@ -254,7 +254,7 @@ def filter_by_detail(client: Session, db: MongoClient, newfilms: Any, rating_typ
 
 
 def filter_imdb_films(client: Session, db: MongoClient, newfilms: Any) -> Any:
-    ''' Filter: first (new or popular films list) result (by rating & year, 
+    ''' Filter: first (new or popular films list) result (by rating & year,
         etc), if not persist in DB, film's detail (by genres or other) '''
 
     filtred: Any = filter_regular_result(newfilms, 'imDbRating', 'imDbRatingCount', 'year')
@@ -264,7 +264,7 @@ def filter_imdb_films(client: Session, db: MongoClient, newfilms: Any) -> Any:
     return filtred
 
 
-def convert_imdb_in_radarr(newfilms: Any) -> list[dict[str, Union[str, int]]]:
+def convert_imdb_in_radarr(newfilms: Any) -> 'list[dict[str, Union[str, int]]]':
     ''' return newfilms in radarr api format (list[dict]) '''
 
     new_radarr_films: list[dict[str, Union[str, int]]] = []
@@ -279,12 +279,12 @@ def convert_imdb_in_radarr(newfilms: Any) -> list[dict[str, Union[str, int]]]:
     return new_radarr_films
 
 
-def get_new_from_imdb(client: Session, db: MongoClient) -> list[dict[Union[str, int]]]:
+def get_new_from_imdb(client: Session, db: MongoClient) -> 'list[dict[Union[str, int]]]':
     ''' Get new films from imdb-api.com.
 
         1. Convert fields in radarr format
-        2. NOT ADD film if old, allready persist in DB or marked_filtred. 
-    
+        2. NOT ADD film if old, allready persist in DB or marked_filtred.
+
     '''
     radarr_newfilms: list[dict[Union[str, int]]] = []
     r: Union[Response, None] = get_imdb_data(client, 'popular')
@@ -296,14 +296,14 @@ def get_new_from_imdb(client: Session, db: MongoClient) -> list[dict[Union[str, 
     return radarr_newfilms
 
 
-def get_new_films(client: Session, db: MongoClient) -> list[dict[Union[str, int]]]:
+def get_new_films(client: Session, db: MongoClient) -> 'list[dict[Union[str, int]]]':
     ''' Get new films from some kind of rating providers.
 
         Get_new_from_imdb, get_new_from_kinopoisk (TODO) if enabled (TODO).
         Geters must return fields IN RADARR format.
-        schema: get_new_films - get_new_from_imdb|kinopoisk|etc - 
-                filter_imdb|kinopoisk|etc - filter_*. 
-    
+        schema: get_new_films - get_new_from_imdb|kinopoisk|etc -
+                filter_imdb|kinopoisk|etc - filter_*.
+
     '''
 
     newfilms: list[dict[Union[str, int]]] = get_new_from_imdb(client, db)
@@ -312,11 +312,11 @@ def get_new_films(client: Session, db: MongoClient) -> list[dict[Union[str, int]
 
 
 def get_tmdbid_by_imdbid(client: Session, imdbId: str) -> int:
-    ''' Get tmdbId by imdbId useing TMDB API. 
-    
+    ''' Get tmdbId by imdbId useing TMDB API.
+
         https://developers.themoviedb.org/3/find/find-by-id
     '''
-    
+
     tmdb_apikey: str = os.environ.get('TMDB_APIKEY')
     if not tmdb_apikey:
         print('Could not get env TMDB_APIKEY', file=sys.stderr)
@@ -324,13 +324,13 @@ def get_tmdbid_by_imdbid(client: Session, imdbId: str) -> int:
 
     headers: dict[str,str] = {'User-Agent': 'Mozilla/5.0'}
     r: Response = client.get('https://api.themoviedb.org/3/find/' + imdbId + '?api_key=' + tmdb_apikey + '&language=en-US&external_source=imdb_id', headers=headers)
-    
+
     if r.status_code == 200:
         return r.json()['movie_results'][0]['id']
     return 0
 
 
-def necessary_fields_for_radarr(client: Session, film: list[dict[Union[str, int]]]) -> list[dict[Union[str, int]]]:
+def necessary_fields_for_radarr(client: Session, film: 'list[dict[Union[str, int]]]') -> 'list[dict[Union[str, int]]]':
     ''' Add necessary fields for radarr import '''
 
     radarr_film: Any = film
@@ -342,9 +342,9 @@ def necessary_fields_for_radarr(client: Session, film: list[dict[Union[str, int]
     return radarr_film
 
 
-def add_to_radarr(client: Session, db: MongoClient, newfilms: list[dict[Union[str, int]]]) -> int:
+def add_to_radarr(client: Session, db: MongoClient, newfilms: 'list[dict[Union[str, int]]]') -> int:
     ''' Add new films to radarr and return count of added items '''
-    
+
     r: Union[Response, None] = None
     count: int = 0
     for item in newfilms:
@@ -383,11 +383,11 @@ def main() -> Union[int, None]:
     # Add to Radarr
     count:int = add_to_radarr(client, db, newfilms)
     print(count)
-    
+
     if count == 0 :
         print('Can\'t find new films')
         return 0
-    
+
     print('New films added into DB:')
     for film in newfilms:
         print(film['title'], ' (', film['year'], ') ')
