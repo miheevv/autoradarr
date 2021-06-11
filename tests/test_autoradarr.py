@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
-import codecs
-import datetime
 import os
 
 import mongomock
 import pymongo
 import pytest
-import pytest_mock
 import requests
-import requests_mock
 from autoradarr.autoradarr import (
+    convert_imdb_in_radarr,
+    filter_by_detail,
     filter_in_db,
+    filter_in_radarr,
     filter_regular_result,
     get_db,
-    get_new_films,
-    get_imdb_data
+    get_imdb_data,
+    get_radarr_data,
+    get_tmdbid_by_imdbid,
+    main,
+    mark_filtred_in_db,
+    necessary_fields_for_radarr,
+    set_root_folders_by_genres,
 )
 
 db_host = os.environ.get('AUTORADARR_DB_HOST')
@@ -111,7 +115,6 @@ def test_filter_regular_result(newfilms, expected):
     )
 ])
 def test_filter_in_db(newfilms, film_in_db, expected):
-    # breakpoint()
     db_client = mongomock.MongoClient()
     db = db_client.db
     collection = db.films
@@ -142,81 +145,240 @@ def test_get_imdb_data_fail(requests_mock):
     assert get_imdb_data(requests.session(), 'popular') is None   
 
 
-#TODO test_get_radarr_data
+def test_get_radarr_data_get_movie(requests_mock):
+    url = os.environ.get('RADARR_URL') + '/api/v3/movie?apiKey=' + \
+          os.environ.get('RADARR_APIKEY')
+    requests_mock.get(url, text='tt7979580', status_code=200)
+    assert get_radarr_data(requests.session(), 'get_movie').text == 'tt7979580'
+    
+
+def test_get_radarr_data_add_movie(requests_mock):
+    url = os.environ.get('RADARR_URL') + '/api/v3/movie?apiKey=' + \
+          os.environ.get('RADARR_APIKEY')
+    requests_mock.post(url, text='tt7979580', status_code=201)
+    assert get_radarr_data(requests.session(), 
+                           'add_movie', 
+                           api_json={'a': 'b'}).text == 'tt7979580'
 
 
-'''
-
-def test_datestr_to_date_fail():
-    with pytest.raises(ValueError):
-        datestr_to_date('1 мартобря 2016')
-    with pytest.raises(AttributeError):
-        datestr_to_date('восьмого марта 2025')
-    with pytest.raises(ValueError):
-        datestr_to_date('31 февраля 2025')
-    with pytest.raises(ValueError):
-        datestr_to_date('2015 февраля 13')
-    with pytest.raises(AttributeError):
-        datestr_to_date('12.12.2012')
-    with pytest.raises(AttributeError):
-        datestr_to_date('февраля 2025')
-    with pytest.raises(AttributeError):
-        datestr_to_date('1 мая')
+def test_get_radarr_data_fail(requests_mock):
+    url = os.environ.get('RADARR_URL') + '/api/v3/movie?apiKey=' + \
+          os.environ.get('RADARR_APIKEY')
+    requests_mock.get(url, text='tt7979580', status_code=300)
+    assert get_radarr_data(requests.session(), 'get_movie') is None  
+    requests_mock.post(url, text='tt7979580', status_code=301) 
+    assert get_radarr_data(requests.session(), 
+                           'add_movie', 
+                           api_json={'a': 'b'}) is None
 
 
-def test_main_cinemate_fail(mocker):
-    mocker.patch('autocinemator.cinematorprobe.loginin_cinemate', return_value=None)
-    assert main() is None
+@pytest.mark.parametrize(('film_in_db, imdbid, title, persist_in_radarr, expected'), [
+    (
+        [
+            {'imdbId': 'tt180'},        # film in db
+            {'imdbId': 'tt8080'},
+            {'imdbId': 'tt8'}
+
+        ],         
+        'tt180',
+        'tt180 title',
+        0,
+        False                  
+    ),
+    (
+        [
+            {'imdbId': 'tt180'},        # film in db
+            {'imdbId': 'tt8080'},
+            {'imdbId': 'tt8'}
+
+        ],         
+        'tt170',
+        'tt170 title',
+        1,
+        True                  
+    ),
+    (
+        [
+            {'imdbId': 'tt180'}        # film in db
+
+        ],         
+        'tt170',
+        'tt170 title',
+        0,
+        True                  
+    )
+])
+def test_mark_filtred_in_db(film_in_db, imdbid, title, persist_in_radarr, expected):
+    db_client = mongomock.MongoClient()
+    db = db_client.db
+    collection = db.films
+    collection.insert_many(film_in_db)   # If persist in db
+    assert mark_filtred_in_db(db, imdbid, title, persist_in_radarr) == expected
+    if expected:
+        film = collection.find_one({'imdbId': imdbid})
+        assert film['originalTitle'] == title
+        assert film['added']
+        if persist_in_radarr == 1:
+            assert film['persistInRadarr'] == 1
+        else:
+            assert film['filtred'] == 1
+            
+
+def test_filter_in_radarr(mocker):
+    mocker.patch('autoradarr.autoradarr.get_radarr_data', return_value = True)
+    # imdbid_list in filter_in_radarr:
+    mocker.patch('autoradarr.autoradarr.get_radarr_imdbid_list', 
+                 return_value=['tt180','tt190'])
+    db_client = mongomock.MongoClient()
+    db = db_client.db
+    newfilms  = [{'id': 'tt180', 'title': 'Title'},
+                 {'id': 'tt170', 'title': 'Title2'}]
+    expected = [{'id': 'tt170', 'title': 'Title2'}]
+    result = filter_in_radarr(requests.session(), db, newfilms, 'id', 'title')
+    assert result == expected
+    film_in_db = db.films.find_one({'imdbId': 'tt180'})
+    assert film_in_db['imdbId'] == 'tt180'
+    assert film_in_db['originalTitle'] == 'Title'
+
+    # Test empty return
+    mocker.patch('autoradarr.autoradarr.get_radarr_imdbid_list', 
+                 return_value=['tt180','tt190','tt170'])
+    assert filter_in_radarr(requests.session(), db, newfilms, 'id', 'title') == []
 
 
-def test_main_db_fail(mocker):
-    mocker.patch('autocinemator.cinematorprobe.loginin_cinemate', return_value=None)
-    mocker.patch('autocinemator.cinematorprobe.get_db', return_value=True)
-    assert main() is None
+def test_filter_in_radarr_fail(mocker):
+    mocker.patch('autoradarr.autoradarr.get_radarr_data', return_value = None)
+    # imdbid_list in filter_in_radarr:
+    newfilms  = [{'id': 'tt180', 'title': 'Title'},
+                 {'id': 'tt170', 'title': 'Title2'}]
+    db_client = mongomock.MongoClient()
+    db = db_client.db
+    assert filter_in_radarr(requests.session(), db, newfilms, 'id', 'title') == newfilms
 
 
-def test_main_no_films_pass(mocker):
-    mocker.patch('autocinemator.cinematorprobe.loginin_cinemate', return_value=True)
-    mocker.patch('autocinemator.cinematorprobe.get_db', return_value=True)
-    mocker.patch('autocinemator.cinematorprobe.get_new_films', return_value=[])
-    assert main() == 0
+def test_set_root_folders_by_genres():
+    radarr_root_animations = os.environ.get('RADARR_ROOT_ANIMATIONS')
+    film = {'fullTitle': 'Normal Full Title (2021)'}
+    genres = ['Action','Animation']
+    expected = {'fullTitle': 'Normal Full Title (2021)',
+                'rootFolderPath': radarr_root_animations,
+                'folderName': radarr_root_animations + '/Normal Full Title (2021)'}
+    assert set_root_folders_by_genres(film, genres) == expected
+
+    film = {'fullTitle': '%Normal-Full\t\n\r\f\vTitle_ (2021)'}
+    expected = {'fullTitle': '%Normal-Full\t\n\r\f\vTitle_ (2021)',
+                'rootFolderPath': radarr_root_animations,
+                'folderName': radarr_root_animations + '/Normal-Full-Title_ (2021)'}
+    assert set_root_folders_by_genres(film, genres) == expected
+
+    radarr_root_other = os.environ.get('RADARR_ROOT_OTHER')
+    genres = ['Action','Crime']
+    film = {'fullTitle': ' %/Normal-Full\t/Title_  (2021)_  '}
+    expected = {'fullTitle': ' %/Normal-Full\t/Title_  (2021)_  ',
+                'rootFolderPath': radarr_root_other,
+                'folderName': radarr_root_other + '/Normal-Full-Title_ (2021)_'}
+    assert set_root_folders_by_genres(film, genres) == expected
 
 
-def test_main_add_to_db_fail(mocker):
-    mocker.patch('autocinemator.cinematorprobe.loginin_cinemate', return_value=True)
-    mocker.patch('autocinemator.cinematorprobe.get_new_films', return_value=[])
-    newfilms = [
-        {'name': 'Test Name', 'date': datetime.datetime.utcnow(),
-         'categories': ['Test Category']},
-        {'name': 'Test Name 2', 'date': datetime.datetime.utcnow(),
-         'categories': ['Test Category 2']}
-    ]
-    mocker.patch('autocinemator.cinematorprobe.add_torrurl_and_mark', return_value=newfilms)
+def test_set_root_folders_by_genres_fail():
+    with pytest.raises(Exception):
+        set_root_folders_by_genres({'fullTitle': ' %^$&%  Ё  '}, ['Action'])
 
-    class Col:
-        inserted_ids = []
 
-    films_col = Col()
-    mocker.patch.object(pymongo.collection.Collection, 'insert_many', return_value=films_col)
-    assert main() is None
+def test_filter_by_detail(requests_mock):
+    url1 = 'https://imdb-api.com/ru/API/Title/' + os.environ.get('IMDB_APIKEY') + '/tt7979580'
+    requests_mock.get(url1, json={'genres': 'Action, Adventure'})
+    url2 = 'https://imdb-api.com/ru/API/Title/' + os.environ.get('IMDB_APIKEY') + '/tt170'
+    requests_mock.get(url2, json={'genres': 'Action, Drama'})
+    url3 = 'https://imdb-api.com/ru/API/Title/' + os.environ.get('IMDB_APIKEY') + '/tt190'
+    requests_mock.get(url3, json={'genres': 'Drama'})
+    newfilms  = [{'id': 'tt7979580', 'imDbRating': '6.9', 'title': 'Title1', 'fullTitle': '1'},
+                 {'id': 'tt170', 'imDbRating': '7', 'title': 'Title2', 'fullTitle': '2'},
+                 {'id': 'tt190', 'imDbRating': '6.9', 'title': 'Title3', 'fullTitle': '3'}]
+
+    db_client = mongomock.MongoClient()
+    db = db_client.db
+    result = filter_by_detail(requests.session(), db, newfilms)
+    
+    assert len(result) == 2
+    assert result[0]['id'] == 'tt7979580'
+    assert result[1]['id'] == 'tt170'
+
+    # mark_filtred_in_db
+    assert db.films.find_one({'imdbId': 'tt190'})['imdbId'] == 'tt190'
+
+
+def test_filter_by_detail_fail(mocker):
+    mocker.patch('autoradarr.autoradarr.get_imdb_data', return_value = None)
+    # imdbid_list in filter_in_radarr:
+    newfilms  = [{'id': 'tt180', 'title': 'Title'},
+                 {'id': 'tt170', 'title': 'Title2'}]
+    db_client = mongomock.MongoClient()
+    db = db_client.db
+    assert filter_by_detail(requests.session(), db, newfilms) == []
+
+
+@pytest.mark.parametrize(('newfilms, expected'), [
+    (
+        [
+            {'title': 'Title1', 'id': 'tt180', 'year': '2019', 
+             'folderName':'/root/folder', 'rootFolderPath': '/root'},
+            {'title': 'Title2', 'id': 'tt8080', 'year': '2021', 
+             'folderName':'/root/folder2', 'rootFolderPath': '/root'}
+        ],         
+        [
+            {'originalTitle': 'Title1', 'imdbId': 'tt180', 'year': 2019, 
+             'folderName':'/root/folder', 'rootFolderPath': '/root'},
+            {'originalTitle': 'Title2', 'imdbId': 'tt8080', 'year': 2021, 
+             'folderName':'/root/folder2', 'rootFolderPath': '/root'}
+        ]  
+    ),
+        (
+        [
+            {'title': 'Title 1', 'id': 'tt180', 'year': '2033', 
+             'folderName':'/root/folder-(3)', 'rootFolderPath': '/root'}
+        ],         
+        [
+            {'originalTitle': 'Title 1', 'imdbId': 'tt180', 'year': 2033, 
+             'folderName':'/root/folder-(3)', 'rootFolderPath': '/root'}
+        ]  
+    )
+])
+def test_convert_imdb_in_radarr(newfilms, expected):
+    assert convert_imdb_in_radarr(newfilms) == expected
+
+
+def test_get_tmdbid_by_imdbid():
+    assert get_tmdbid_by_imdbid(requests.session(), 'tt7979580') == 501929
+
+
+def test_get_tmdbid_by_imdbid_fail():
+    assert get_tmdbid_by_imdbid(requests.session(), 'tt70') == 0
+
+
+def test_necessary_fields_for_radarr():
+    film = {}
+    film['folderName'] = '/folder'
+    film['originalTitle'] = 'Title 1'
+    film['imdbId'] = 'tt7979580'
+    excepted = film
+    excepted['path'] = film['folderName']
+    excepted['title'] = film['originalTitle']
+    excepted['qualityProfileId'] = int(os.environ.get('RADARR_DEFAULT_QUALITY'))
+    excepted['tmdbId'] = 501929
+    assert necessary_fields_for_radarr(requests.session(), film) == excepted
 
 
 def test_main_pass(mocker):
-    mocker.patch('autocinemator.cinematorprobe.loginin_cinemate', return_value=True)
-    mocker.patch('autocinemator.cinematorprobe.get_new_films', return_value=[])
     newfilms = [
-        {'name': 'Test Name', 'date': datetime.datetime.utcnow(),
-         'categories': ['Test Category']},
-        {'name': 'Test Name 2', 'date': datetime.datetime.utcnow(),
-         'categories': ['Test Category 2']}
+        {'fullTitle': 'Mortal Kombat (2021)'},
+        {'fullTitle': 'I Care a Lot (2020)'}
     ]
-    mocker.patch('autocinemator.cinematorprobe.add_torrurl_and_mark', return_value=newfilms)
+    mocker.patch('autoradarr.autoradarr.get_new_films', return_value = newfilms)
+    mocker.patch('autoradarr.autoradarr.add_to_radarr', return_value = len(newfilms))
+    assert main() == len(newfilms)
 
-    class Col:
-        inserted_ids = ['1', '2']
 
-    films_col = Col()
-    mocker.patch.object(pymongo.collection.Collection, 'insert_many', return_value=films_col)
-    assert main() == 2
-
-'''
+def test_main_db_fail(mocker):
+    mocker.patch('autoradarr.autoradarr.get_db', return_value = None)
+    assert main() is None

@@ -1,6 +1,6 @@
 # autoradarr
 
-[![Build Status](https://github.com/miheevv/autoradarr/workflows/test/badge.svg?branch=master&event=push)](https://github.com/miheevv/autoradarr/actions?query=workflow%3Atest)
+[![Build Status](https://github.com/miheevv/autoradarr/workflows/test/badge.svg?branch=main&event=push)](https://github.com/miheevv/autoradarr/actions?query=workflow%3Atest)
 [![Python Version](https://img.shields.io/pypi/pyversions/autoradarr.svg)](https://pypi.org/project/autoradarr/)
 [![wemake-python-styleguide](https://img.shields.io/badge/style-wemake-000000.svg)](https://github.com/wemake-services/wemake-python-styleguide)
 
@@ -11,14 +11,6 @@ Auto scan for new films in imbd, kinopoisk, etc and add into radarr db
 
 - Fully typed with annotations and checked with mypy, [PEP561 compatible](https://www.python.org/dev/peps/pep-0561/)
 - Add yours!
-
-
-## Installation
-
-```bash
-pip install autoradarr
-```
-
 
 ## Example
 
