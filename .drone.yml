@@ -29,7 +29,7 @@ steps:
     TMDB_APIKEY: 
       from_secret: TMDB_APIKEY
   commands:
-  - sudo apt install net-tools
+  - apt install net-tools
   - ifconfig -a
   - ping -c 3 172.19.0.2
   #- /usr/local/bin/python -m pip install --upgrade pip
