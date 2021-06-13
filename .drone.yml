@@ -29,6 +29,7 @@ steps:
     TMDB_APIKEY: 
       from_secret: TMDB_APIKEY
   commands:
-  - /usr/local/bin/python -m pip install --upgrade pip
-  - pip install -r requirements-dev.txt
-  - pytest
+  ping -c 3 172.19.0.2
+  #- /usr/local/bin/python -m pip install --upgrade pip
+  #- pip install -r requirements-dev.txt
+  #- pytest
