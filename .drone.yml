@@ -40,6 +40,6 @@ steps:
     repo: registry.digitalocean.com/miheevv
     registry: registry.digitalocean.com
     tags: latest
-    <!– auth
-    from_secret: DOCKER_AUTH ->
+    <!– auth:
+      from_secret: DOCKER_AUTH ->
  
