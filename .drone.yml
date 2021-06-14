@@ -31,7 +31,7 @@ steps:
   commands:
   - cat /etc/hosts
   - ping -c 3 172.19.0.1
-  - ping -с 3 68.183.242.186
+  - ping -c 3 68.183.242.186
   - ping -c 3 do1
   - ping -c 3 do.mihhome.ru
   - ping -c 3 167.71.34.145
