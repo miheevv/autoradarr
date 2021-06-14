@@ -32,10 +32,10 @@ steps:
   - cat /etc/hosts
   - ping -c 3 172.19.0.1
   - ping -с 3 68.183.242.186
-  - ping -c do1
-  - ping -c do.mihhome.ru
-  - ping -c 167.71.34.145
-  - ping -c 10.114.0.2
+  - ping -c 3 do1
+  - ping -c 3 do.mihhome.ru
+  - ping -c 3 167.71.34.145
+  - ping -c 3 10.114.0.2
   - /usr/local/bin/python -m pip install --upgrade pip
   - pip install -r requirements-dev.txt
   - pytest
