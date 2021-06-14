@@ -6,7 +6,7 @@ kind: pipeline
 
 steps:
 - name: test
-  image: ubuntu
+  image: python
   environment:
     AUTORADARR_DB_HOST: 
       from_secret: AUTORADARR_DB_HOST
