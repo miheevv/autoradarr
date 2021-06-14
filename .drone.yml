@@ -29,13 +29,7 @@ steps:
     TMDB_APIKEY: 
       from_secret: TMDB_APIKEY
   commands:
-  #- cat /etc/hosts
-  - ping -c 3 172.21.0.2
-  - ping -c 3 mongodb
-  #- ping -c 3 68.183.242.186
-  #- ping -c 3 do.mihhome.ru
-  #- ping -c 3 167.71.34.145
-  #- ping -c 3 10.114.0.2
+  - cat /etc/hosts
   - /usr/local/bin/python -m pip install --upgrade pip
   - pip install -r requirements-dev.txt
   - pytest
