@@ -40,5 +40,5 @@ steps:
     repo: registry.digitalocean.com/miheevv
     registry: registry.digitalocean.com
     tags: latest
-    ${DOCKER_AUTH}
+    from_secret: DOCKER_AUTH
  
