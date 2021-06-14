@@ -33,3 +33,12 @@ steps:
   - /usr/local/bin/python -m pip install --upgrade pip
   - pip install -r requirements-dev.txt
   - pytest
+
+- name: docker
+  image: plugins/docker
+  settings:
+    repo: registry.digitalocean.com/miheevv
+    registry: registry.digitalocean.com
+    tags: latest
+    ${DOCKER_AUTH}
+ 
