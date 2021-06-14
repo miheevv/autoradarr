@@ -30,8 +30,8 @@ steps:
       from_secret: TMDB_APIKEY
   commands:
   #- cat /etc/hosts
-  - ping -c 3 172.21.0.2
-  - ping -c 3 mongodb
+  #- ping -c 3 172.21.0.2
+  #- ping -c 3 mongodb
   #- ping -c 3 68.183.242.186
   #- ping -c 3 do.mihhome.ru
   #- ping -c 3 167.71.34.145
