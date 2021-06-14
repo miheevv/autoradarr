@@ -30,7 +30,6 @@ steps:
       from_secret: TMDB_APIKEY
   commands:
   - cat /etc/hosts
-  - ping -c 3 172.19.0.2
   - ping -c 3 172.19.0.1
   - ping -с 3 68.183.242.186
   - ping -c do1
