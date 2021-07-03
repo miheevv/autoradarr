@@ -25,6 +25,7 @@ import unicodedata
 from typing import Any, Optional, Union
 
 import pymongo
+# from pymongo.common import VALIDATORS
 import requests
 from pymongo.database import Database
 from pymongo.mongo_client import MongoClient
@@ -83,11 +84,14 @@ def filter_regular_result(newfilms: Any,
            (not item[rating_count_field]) or \
            (int(item[rating_count_field]) < 5000):
             removeflag = True
-        if (year_field not in item) or \
-           (not item[year_field]) or \
-           (int(item[year_field]) < year - 1):
-            removeflag = True
-
+        try:
+            if (year_field not in item) or \
+               (not item[year_field]) or \
+               (int(item[year_field]) < year - 1):
+                removeflag = True
+        # Year format incorrect - next film
+        except ValueError:
+            continue
         if not removeflag:
             notfiltred_films.append(item)
 
@@ -170,7 +174,9 @@ def get_radarr_data(client: Session,
 def get_radarr_imdbid_list(r: Response) -> 'list[str]':
     imdb_list: list[str] = []
     for item in r.json():
-        if item['imdbId']:
+        if 'imdbId' not in item:
+            imdb_list.append({'imdbId': '0'})
+        elif item['imdbId']:
             imdb_list.append(item['imdbId'])
     return imdb_list
 
@@ -434,7 +440,10 @@ def main() -> Optional[int]:
 
     print('New films added into DB:')
     for film in newfilms:
-        print(film['fullTitle'])
+        if 'fullTitle' in film:
+            print(film['fullTitle'])
+        elif 'title' in film:
+            print(film['title'])
     return count
 
 
