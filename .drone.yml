@@ -34,10 +34,15 @@ steps:
   - pip install -r requirements-dev.txt
   - pytest
 
-- name: build
-  image: registry.digitalocean.com/miheevv/autoradarr
-
-image_pull_secrets:
-- dockerconfig
+steps:
+- name: docker  
+  image: plugins/docker
+  environment:
+      TOKEN:
+        from_secret: dockerconfig
+  settings:
+    repo: registry.digitalocean.com/miheevv/autoradarr
+    registry: registry.digitalocean.com/miheevv
+    - dockerconfig
 
  
