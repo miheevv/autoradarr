@@ -36,11 +36,9 @@ steps:
 
 - name: docker  
   image: plugins/docker
-  environment:
-      TOKEN:
-        from_secret: dockerconfig
   settings:
-    repo: registry.digitalocean.com/miheevv/autoradarr
-    registry: registry.digitalocean.com/miheevv
-    build_args_from_env:
-      - dockerconfig
+    username: 
+      from_secret: DOCKER_USERNAME
+    password: 
+      from_secret: DOCKER_PASSWORD
+    repo: autoradarr
