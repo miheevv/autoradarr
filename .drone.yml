@@ -34,16 +34,10 @@ steps:
   - pip install -r requirements-dev.txt
   - pytest
 
-- name: docker
-  image: plugins/docker
-  environment:
-    TOKEN:
-      from_secret: DOCKER_AUTH
-  settings:
-    repo: registry.digitalocean.com/miheevv
-    registry: registry.digitalocean.com
-    tags: latest
-    build_args_from_env:
-      - TOKEN
+- name: build
+  image: autoradarr
+  
+image_pull_secrets:
+- dockerconfig
 
  
