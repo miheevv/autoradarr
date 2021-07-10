@@ -43,6 +43,7 @@ steps:
   settings:
     repo: registry.digitalocean.com/miheevv/autoradarr
     registry: registry.digitalocean.com/miheevv
-    - dockerconfig
+    build_args_from_env:
+      - dockerconfig
 
  
