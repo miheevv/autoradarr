@@ -35,8 +35,8 @@ steps:
   - pytest
 
 - name: build
-  image: autoradarr
-  
+  image: registry.digitalocean.com/miheevv/autoradarr
+
 image_pull_secrets:
 - dockerconfig
 
