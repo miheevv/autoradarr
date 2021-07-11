@@ -40,4 +40,4 @@ steps:
       from_secret: DOCKER_USERNAME
     password: 
       from_secret: DOCKER_PASSWORD
-    repo: autoradarr
+    repo: miheevv/autoradarr
