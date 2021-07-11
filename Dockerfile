@@ -2,7 +2,7 @@ FROM python
 COPY ./requirements.txt .
 RUN /usr/local/bin/python -m pip install --upgrade pip
 RUN pip install -r requirements.txt
-COPY ./autoradarr/*.py .
+COPY ./autoradarr/autoradarr.py .
 ENV AUTORADARR_DB_HOST=$AUTORADARR_DB_HOST
 ENV AUTORADARR_DB_USERNAME=$AUTORADARR_DB_USERNAME
 ENV AUTORADARR_DB_PASSWORD=$AUTORADARR_DB_PASSWORD
