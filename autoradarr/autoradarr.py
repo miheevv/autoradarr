@@ -451,4 +451,5 @@ def main() -> Optional[int]:
 if __name__ == '__main__':
     while True:
         main()
-        time.sleep(3 * 24 * 60 * 60)
+        # day * hour * min * sec
+        time.sleep(1 * 24 * 60 * 60)
