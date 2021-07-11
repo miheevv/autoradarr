@@ -415,7 +415,7 @@ def add_to_radarr(client: Session,
 def main() -> Optional[int]:
     ''' Return count of added films or None if error '''
     locale.setlocale(locale.LC_ALL, '')
-    print('Autoradarr has been started at {}'.format(datetime.utcnow()))
+    print('Autoradarr has been started at {}'.format(datetime.datetime.utcnow()))
 
     # DB
     db_host: str = str(os.environ.get('AUTORADARR_DB_HOST'))
