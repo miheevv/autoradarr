@@ -14,7 +14,7 @@ TODO
 radarralice.py
 
 '''
-
+import time
 import datetime
 # from pprint import pprint
 import locale
@@ -414,10 +414,10 @@ def add_to_radarr(client: Session,
 
 def main() -> Optional[int]:
     ''' Return count of added films or None if error '''
-
-    print(os.environ.items)
-
     locale.setlocale(locale.LC_ALL, '')
+    
+    print('Autoradarr has been started at {}'.format(datetime.now()))
+    
     # DB
     db_host: str = str(os.environ.get('AUTORADARR_DB_HOST'))
     DB_NAME: str = 'autoradarr'
@@ -450,4 +450,6 @@ def main() -> Optional[int]:
 
 
 if __name__ == '__main__':
-    main()
+    while True:
+        main()
+        time.sleep(3 * 24 * 60 * 60)
