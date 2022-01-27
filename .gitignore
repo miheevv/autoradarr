@@ -219,3 +219,4 @@ fabric.properties
 
 # Poetry
 poetry.lock
+pyproject.toml
