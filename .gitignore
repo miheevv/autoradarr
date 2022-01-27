@@ -216,3 +216,6 @@ fabric.properties
 
 #VSCode settings
 .vscode/
+
+# Poetry
+poetry.lock
