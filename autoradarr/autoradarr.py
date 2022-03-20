@@ -129,8 +129,8 @@ def get_imdb_data(client: Session,
         r: Response = client.get('https://imdb-api.com/ru/API/MostPopularMovies/' +
                                  imdb_apikey, headers=headers)
     if data_type == 'details':
-        r = client.get('https://imdb-api.com/ru/API/Title/' + imdb_apikey +
-                       '/' + param, headers=headers)
+        url = 'https://imdb-api.com/ru/API/Title/' + imdb_apikey + '/' + param
+        r = client.get(url, headers=headers)
 
     if r.status_code == 200:
         return r
