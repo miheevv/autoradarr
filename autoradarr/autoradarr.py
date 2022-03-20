@@ -445,6 +445,8 @@ def main() -> Optional[int]:
             print(film['fullTitle'])
         elif 'title' in film:
             print(film['title'])
+    
+    print('Autoradarr has been entered in sleep mode at {}'.format(datetime.datetime.utcnow()))
     return count
 
 
@@ -452,4 +454,6 @@ if __name__ == '__main__':
     while True:
         main()
         # day * hour * min * sec
-        time.sleep(1 * 24 * 60 * 60)
+        # time.sleep(1 * 24 * 60 * 60)
+        time.sleep(1 * 60 * 60)
+        
