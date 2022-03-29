@@ -126,15 +126,19 @@ def get_imdb_data(client: Session,
 
     headers: Dict[str, str] = {'User-Agent': 'Mozilla/5.0'}
     if data_type == 'popular':
+        print('Getting Popular films from imdb...')
         r: Response = client.get('https://imdb-api.com/ru/API/MostPopularMovies/' +
                                  imdb_apikey, headers=headers)
     if data_type == 'details':
+        print('Getting detail of film', param, '...')
         url = 'https://imdb-api.com/ru/API/Title/' + imdb_apikey + '/' + param
         r = client.get(url, headers=headers)
 
     if r.status_code == 200:
+        print('Processing result...')
         return r
 
+    print('No result')
     return None
 
 
@@ -415,7 +419,7 @@ def add_to_radarr(client: Session,
 def main() -> Optional[int]:
     ''' Return count of added films or None if error '''
     locale.setlocale(locale.LC_ALL, '')
-    print('Autoradarr has been started at {}'.format(datetime.datetime.utcnow()))
+    print('--- Autoradarr has been started at {}'.format(datetime.datetime.utcnow()))
 
     # DB
     db_host: str = str(os.environ.get('AUTORADARR_DB_HOST'))
@@ -429,6 +433,7 @@ def main() -> Optional[int]:
         return None
 
     # Get new films
+    print('Getting new films...')
     client: Session = requests.session()
     newfilms: List[Dict[str, Union[str, int]]] = get_new_films(client, db)
 
@@ -446,13 +451,13 @@ def main() -> Optional[int]:
         elif 'title' in film:
             print(film['title'])
 
-    print('Autoradarr has been entered in sleep mode at {}'.format(datetime.datetime.utcnow()))
     return count
 
 
 if __name__ == '__main__':
     while True:
         main()
+        print('--- Autoradarr has been entered in sleep mode at {}'.format(datetime.datetime.utcnow()))
         # day * hour * min * sec
         # time.sleep(1 * 24 * 60 * 60)
         time.sleep(1 * 60 * 60)
